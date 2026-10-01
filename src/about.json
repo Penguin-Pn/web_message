@@ -1,0 +1,38 @@
+{
+    "name": {
+        "cache": "W-Msg-cache",
+        "db-name": "W-Msg-DB",
+        "short-name": {
+            "en": "Messaging web",
+            "fa": "وب پیام رسان",
+            "ar": "برنامج مراسلة عبر الإنترنت",
+            "ja": "ウェブメッセンジャー",
+            "ko": "웹 메신저",
+            "zh": "網路信使"
+        },
+        "app-name": {
+            "en": "Open Source Web Messaging Project",
+            "fa": "پروژه متن باز پیام رسان وب",
+            "ar": "مشروع مراسلة الويب مفتوح المصدر",
+            "ja": "オープンソースWebメッセージングプロジェクト",
+            "ko": "오픈 소스 웹 메시징 프로젝트",
+            "zh": "開源網路訊息傳遞項目"
+        },
+        "description": {
+            "en": "Open Source Web Messaging Project",
+            "fa": "پروژه متن باز پیام رسان وب",
+            "ar": "مشروع مراسلة الويب مفتوح المصدر",
+            "ja": "オープンソースWebメッセージングプロジェクト",
+            "ko": "오픈 소스 웹 메시징 프로젝트",
+            "zh": "開源網路訊息傳遞項目"
+        }
+    },
+    "computer": {
+      "run": "your run mode: http or https",
+      "RAM": [ 4, "gb" ],
+      "CPUs": 4,
+      "web_cache": [ 20, "gb", { "chunk_length": 5 } ],
+      "cache_time": [ 1, "h" ],
+      "port": 2345
+    }
+}
