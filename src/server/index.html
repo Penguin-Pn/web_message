@@ -1,1 +1,173 @@
+<!DOCTYPE html>
+<html id="html" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title id="title">Web Message</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+        }
+        iframe {
+            display: block;
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+        div {
+            font-size: 6rem;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+        }
+    </style>
+    <script src="/Script/DB.js"></script>
+    <script src="/sw.js"></script>
+    <script src="/swf.js" type="module"></script>
+    <script src="/Script/main.js"></script>
+</head>
+<body id="body">
+    <script>
+        // Notification function
+        function notification(title, text, url, icon_url) {
+            if (!('Notification' in window)) {
+                return 'error';
+            }
 
+            function show(title, text, url, icon_url) {
+                try {
+                    var icon = icon_url || '/icon/black.png';
+                    var options = {
+                        body: text || '',
+                        icon: icon,
+                        badge: icon,
+                        data: {
+                            url: url || '/'
+                        },
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
+                    };
+                    var notif = new Notification(title || 'Web Message', options);
+                    notif.onclick = function() {
+                        window.focus();
+                        if (url) {
+                            window.location.href = url;
+                        }
+                        this.close();
+                    };
+                    setTimeout(function() {
+                        notif.close();
+                    }, 10000);
+                    return;
+                } catch (error) {
+                    return 'error';
+                }
+            }
+
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission().then(function(permission) {
+                    if (permission === 'granted') {
+                        show(title, text, url, icon_url);
+                    }
+                });
+                return 'error';
+            }
+            return show(title, text, url, icon_url);
+        }
+        var dn, db_acc, db_name, mani_db;
+        // Main variables
+        var body = document.getElementById('body');
+        var html = document.getElementById('html');
+        var title = document.getElementById('title');
+
+        // Main function
+        async function main() {
+            // db name
+            const res = await fetch('/api/name/db-name');
+            dn = await res.text();
+            db_acc = new DB(dn, 'account');
+            db_name = new DB(dn, 'names')
+            mani_db = new DB(dn, "mani");
+            if (await db_acc.has('user')) {
+                let a1 = (await db_acc.get('theme')).split('-')[0];
+                html.lang = await db_acc.get('lang');
+                title.innerText = await db_name.get('name-app');
+                
+                let icon = document.createElement('link');
+                icon.rel = 'icon';
+                icon.type = 'image/png';
+                icon.sizes = '512x512';
+                icon.href = '/icon/' + a1 + '.png';
+                icon.id = "icon";
+                document.head.appendChild(icon);
+                
+                let manifest = document.createElement('link');
+                manifest.rel = 'manifest';
+                manifest.href = await sw.pushof( await mani_db.get('manifest'), 'manifest.json', true );
+                manifest.id = "manifest";
+                document.head.appendChild(manifest);
+                
+                
+                let iframe = document.createElement('iframe');
+                iframe.src = URL.createObjectURL( chtml(html.lang) );
+                iframe.id = "iframe";
+                
+                body.appendChild(iframe);
+  
+                return iframe.src;
+            } else {
+                let iframe = document.createElement('iframe');
+                iframe.id = "iframe";
+                iframe.src = 'login.html';
+                body.appendChild(iframe);
+            }
+        }
+        // reload
+        async function reload() {
+            URL.revokeObjectURL(iurl);
+  
+            let iframe = document.getElementById("iframe");
+            iframe.remove();
+            
+            let manifest = document.getElementById("manifest");
+            manifest.remove();
+            
+            let icon = document.getElementById("icon");
+            icon.remove();
+            
+            iurl = await main();
+
+            URL.createObjectURL(iurl);
+            
+        }
+
+        // Receive postMessage
+        window.addEventListener('message', async function(event) {
+            let payload = event.data.payload;
+            if (!(window.location.origin).includes(event.origin)) { return; }
+            if (typeof payload === 'string') {
+                if (payload === 'reload') {
+                    reload();
+                }
+            }
+            if (Array.isArray(payload)) {
+                if (payload[0] === 'notification' && payload.length >= 4) {
+                    await notification(
+                      payload[1], // notif title
+                      payload[2], // notif content
+                      payload[3], // notif url
+                      payload[4]  // notif icon
+                    );
+                }
+            }
+        });
+
+        // Run
+        var iurl = main();
+    </script>
+</body>
+</html>
