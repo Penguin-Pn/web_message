@@ -16,7 +16,7 @@ A `.theuip` file is a binary container with the following minimum layout:
 | Offset | Size    | Field         | Description                                  |
 |--------|---------|---------------|----------------------------------------------|
 | 0      | 1 byte  | Magic Prefix  | `0x05`                                       |
-| 1      | 7 bytes | Magic String  | ASCII `THEUIP\n` (0x54 48 45 55 49 50 0A)  |
+| 1      | 7 bytes | Magic String  | ASCII `THEUIP\n` ( 0x54 48 45 55 49 50 0A )  |
 | 8      | 4 bytes | Original Size | Big-endian uint32, size of decompressed payload in bytes |
 | 12     | N bytes | Payload       | zlib-compressed (RFC 1950) JSON payload      |
 
