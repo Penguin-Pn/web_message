@@ -27,7 +27,7 @@ of this JSON document is proprietary and not publicly documented.
 `.theuip`
 
 ## MIME Type
-`application/vnd.penguin.theuip+json`
+`application/vnd.penguin-pn.theuip+json`
 
 ## Security Considerations
 1. **Decompression limits:** Implementations MUST enforce a strict maximum size 
