@@ -175,4 +175,4 @@ function encode(theme) {
   }
 }
 
-export { decode, encode };
+export { filter_css, dctj, decode, encode };
