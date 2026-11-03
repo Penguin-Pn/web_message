@@ -2,10 +2,16 @@ import { zlibSync, unzlibSync, strToU8, strFromU8 } from 'fflate.js';
 
 function filter_css(obj) {
   const allow = [
-    "--bg-main", "--bg-panel", "--bg-chat", "--bg-msg-in", "--bg-msg-out", 
-    "--bg-input", "--bg-btn", "--bg-hover", "--bg-active", "--text-main", 
-    "--text-sub", "--text-msg-in", "--text-msg-out", "--text-error", "--text-success", 
-    "--border", "--shadow", "--accent", "--accent-hover", "--icon-color"
+    "--bg-main", "--bg-panel", "--bg-chat", "--bg-msg-in", "--bg-msg-out",
+    "--bg-input", "--bg-btn", "--bg-btn-hover", "--bg-btn-active", "--bg-hover",
+    "--bg-active", "--bg-overlay", "--bg-card", "--bg-dropdown", "--bg-code",
+    "--bg-highlight", "--bg-sys-msg", "--text-main", "--text-sub", "--text-msg-in",
+    "--text-msg-out", "--text-error", "--text-success", "--text-warning", "--text-link",
+    "--text-highlight", "--text-code", "--text-placeholder", "--text-time", "--text-online",
+    "--text-offline", "--text-sys-msg", "--border", "--border-focus", "--border-divider",
+    "--shadow-light", "--shadow-heavy", "--accent", "--accent-hover", "--accent-active",
+    "--icon-main", "--icon-hover", "--icon-active", "--status-online", "--status-offline",
+    "--status-away", "--status-busy", "--badge-bg", "--badge-text", "--scrollbar-thumb"
   ];
 
   const isColor = (val) => {
