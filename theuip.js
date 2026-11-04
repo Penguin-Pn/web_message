@@ -124,6 +124,7 @@ async function decode(the, blob) {
     }
     
     return {
+      ...the,
       css: cs,
       strs: strs
     };
