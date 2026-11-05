@@ -18,56 +18,54 @@ This document defines four variants of the protocol:
 - **C4HKAS:** Advanced 1-on-1 secure chat with 2 Test Messages (4 Hashes).
 - **C5HKAS:** Advanced Group secure chat with 2 Test Messages (5 Hashes).
 
-## 2. C2HKAS (Basic 1-on-1 Chat)
-**C2HKAS** stands for **C**omparison of **2** **H**ashes, **K**ey **A**symmetric, **S**ymmetric.
+## 2. Core Security Mechanisms
 
-### 2.1. Handshake Flow
-1. **Asymmetric Key Generation:** User 1 generates an Asymmetric Key Pair (Public/Private). User 2 does not need a persistent asymmetric key pair.
-2. **Public Key Exchange:** User 1 sends their Public Key to User 2 through the server.
-3. **Hash Comparison 1 (Root):** User 1 and User 2 initiate a Live Video Call. They compare the cryptographic hash of User 1's Public Key (e.g., an 8-character fingerprint: `B J H 7 - G 5 A R`).
-4. **Symmetric Key Generation:** Once verified, User 2 generates a strong Symmetric Key (e.g., AES-256-GCM) and encrypts it using User 1's verified Public Key.
-5. **Decryption & Hash Comparison 2 (Payload):** User 1 decrypts the Symmetric Key. Both users compare the hash of the Symmetric Key during the live video call.
-6. **Session Established:** If both hashes match, the E2EE session is established.
+### 2.1. Slow Hashing (Work Factor)
+To prevent brute-force and real-time collision attacks, the 8-character safety numbers are NOT generated using a simple SHA-256 hash. 
+Implementations MUST use a key-stretching algorithm (e.g., 6 iterations of a cryptographic hash function, where each iteration takes ~0.5 seconds). 
+This creates a **3-second processing delay (Work Factor)** per hash generation. Even with massive GPU clusters, generating a fake key that produces the exact same 8-character hash in real-time is computationally infeasible.
 
-## 3. C3HKAS (Basic Group Chat)
-**C3HKAS** stands for **C**omparison of **3** **H**ashes, **K**ey **A**symmetric, **S**ymmetric.
+### 2.2. 30-Second Live OOB Verification
+The Out-of-Band (OOB) verification must strictly be a Live Video Call, limited to a maximum of 30 seconds for the verification step.
+- Users MUST see each other's live faces during this call.
+- The frontend application displays the 8-character Base32 hash (e.g., `B J H 7 - G 5 A R`).
+- Users simply type the hash they see on the other person's screen. The frontend compares them automatically.
+- If the server attempts a MitM attack (swapping keys), User A and User B will see *different* hashes on their screens. Since they are on a live call with each other, they will immediately notice the mismatch.
 
-C3HKAS uses a sequential Star-Topology model to ensure every member securely receives the Group Symmetric Key.
+## 3. Protocol Variants
 
-### 3.1. Handshake Flow
-1. **Public Key Submission:** User 1 sends their Public Key to the Admin via the server.
-2. **Root Hash Verification (Hash 1):** The Admin and User 1 initiate a Live Video Call and compare the cryptographic hash of User 1's Public Key.
-3. **Symmetric Key Distribution:** The Admin encrypts the Group Symmetric Key using User 1's verified Public Key and sends it.
-4. **Payload Hash Verification (Hash 2):** User 1 decrypts the Group Symmetric Key. Both the Admin and User 1 compare the hash of this Symmetric Key during the Live Video Call.
-5. **Sequential Verification:** Steps 1 to 4 are repeated for every user in the group, from User 1 to User N.
-6. **Final Group Verification (Hash 3):** The Admin broadcasts the final Group Symmetric Key hash to the entire group. All online users compare this broadcasted hash to ensure consistency.
+### 3.1. C2HKAS (Basic 1-on-1)
+1. **Key Gen:** User 1 generates a key pair.
+2. **Exchange:** User 1 sends Public Key.
+3. **Hash 1:** Live Video Call (30s) to compare Public Key hash.
+4. **Sym Key:** User 2 generates and encrypts the Symmetric Key.
+5. **Hash 2:** Live Video Call to compare Symmetric Key hash.
 
-## 4. C4HKAS (Advanced 1-on-1 Chat)
-**C4HKAS** stands for **C**omparison of **4** **H**ashes, **K**ey **A**symmetric, **S**ymmetric.
+### 3.2. C3HKAS (Basic Group)
+C3HKAS uses a sequential Star-Topology model.
+1. **Submit:** User 1 sends Public Key to Admin.
+2. **Hash 1:** Admin and User 1 compare Public Key hash (Video Call).
+3. **Distribute:** Admin encrypts Group Sym Key and sends it.
+4. **Hash 2:** Admin and User 1 compare Sym Key hash.
+5. **Loop:** Repeat 1-4 for all users (1 to N).
+6. **Hash 3:** Admin broadcasts final Group Sym Key hash. All users verify.
 
-C4HKAS is an enhanced version of C2HKAS. It includes a Challenge-Response mechanism using 2 Test Messages to prove that bidirectional encryption and decryption are fully functional.
+### 3.3. C4HKAS (Advanced 1-on-1)
+C4HKAS is the recommended standard.
+- Performs C2HKAS (Hashes 1 & 2).
+- **Test Message 1 (Ping):** User 1 encrypts a random string and sends it. User 2 decrypts it. (Hash 3)
+- **Test Message 2 (Pong):** User 2 encrypts a random string and sends it. User 1 decrypts it. (Hash 4)
+- Proves bidirectional encryption pipelines are fully functional.
 
-### 4.1. Handshake Flow
-1. **Root & Payload Verification:** Users perform the standard C2HKAS protocol (Hashes 1 and 2).
-2. **Test Message 1 (User 1 to User 2):** User 1 encrypts a random test string (e.g., "Ping") using the newly established Symmetric Key and sends it. User 2 decrypts and verifies the message. (Hash 3)
-3. **Test Message 2 (User 2 to User 1):** User 2 encrypts a random test string (e.g., "Pong") using the Symmetric Key and sends it back. User 1 decrypts and verifies the message. (Hash 4)
-4. **Session Established:** If both test messages decrypt correctly, the session is confirmed secure.
+### 3.4. C5HKAS (Advanced Group)
+C5HKAS is the recommended standard for groups.
+- Performs C3HKAS (Hashes 1, 2 & 3).
+- **Test Message 1:** Admin broadcasts an encrypted test message. All users decrypt. (Hash 4)
+- **Test Message 2:** A user encrypts a test message. Admin and all other users decrypt. (Hash 5)
 
-## 5. C5HKAS (Advanced Group Chat)
-**C5HKAS** stands for **C**omparison of **5** **H**ashes, **K**ey **A**symmetric, **S**ymmetric.
-
-C5HKAS is an enhanced version of C3HKAS. It ensures that the Group Symmetric Key is perfectly aligned across all nodes by exchanging 2 Group Test Messages.
-
-### 5.1. Handshake Flow
-1. **Root, Payload & Final Verification:** Users perform the standard C3HKAS protocol (Hashes 1, 2, and 3).
-2. **Test Message 1 (Admin to Group):** The Admin broadcasts a test message encrypted with the Group Symmetric Key. All users must decrypt and verify it. (Hash 4)
-3. **Test Message 2 (Group to Admin):** One or all users encrypt a test message and send it to the group. The Admin and all other users verify it. (Hash 5)
-4. **Session Established:** The Group E2EE session is fully confirmed.
-
-## 6. Security Considerations
-- **Trustless Server:** The server only acts as a relay and cannot read the Symmetric Keys.
-- **Out-of-Band (OOB) Verification:** The Live Video Call is the ultimate source of truth against MitM attacks.
-- **Forward Secrecy:** (Future Scope) Keys can be rotated using the Double Ratchet algorithm.
+## 4. Security Considerations
+- **Trustless Server:** The server only relays data. It cannot read Symmetric Keys.
+- **Why Deepfakes Fail:** The 3-second slow hash generation and the 30-second live visual verification make real-time AI deepfakes computationally and financially unfeasible for attackers.
 
 ---
 
@@ -75,68 +73,35 @@ C5HKAS is an enhanced version of C3HKAS. It ensures that the Group Symmetric Key
 **پیام‌رسان وب پنگوئن - سرویس E2EE**
 
 ## ۱. مقدمه
-پیام‌رسان پنگوئن بر پایه یک معماری دو سرویسی کار می‌کند:
-۱. **چت عادی (Normal Chat):** پیام‌رسانی پرسرعت، همگام‌سازی شده و با امکانات کامل.
-۲. **سرویس E2EE:** امنیت و حریم خصوصی حداکثری با استفاده از خانواده پروتکل‌های **CXHKAS**.
+پیام‌رسان پنگوئن دارای دو سرویس است: ۱. چت عادی. ۲. سرویس E2EE (با استفاده از خانواده پروتکل‌های CXHKAS).
+پروتکل CXHKAS برای حذف حملات مرد میانی (MitM) از یک تماس ویدیویی زنده به عنوان کانال تایید خارج از باند (OOB) استفاده می‌کند. سرور غیرقابل اعتماد است و تایید هویت کاملاً توسط کاربران انجام می‌شود.
 
-پروتکل **CXHKAS** برای حذف حملات مرد میانی (MitM) با استفاده از یک تماس ویدیویی زنده به عنوان یک کانال تایید خارج از باند (OOB) طراحی شده است. سرور غیرقابل اعتماد (Trustless) در نظر گرفته می‌شود و تایید هویت کاملاً توسط کاربران انجام می‌شود.
+این سند چهار نوع پروتکل را تعریف می‌کند: C2HKAS، C3HKAS، C4HKAS و C5HKAS.
 
-این سند چهار نوع از این پروتکل را تعریف می‌کند:
-- **C2HKAS:** چت امن یک‌به‌یک پایه (۲ هش).
-- **C3HKAS:** چت امن گروهی پایه (۳ هش).
-- **C4HKAS:** چت امن یک‌به‌یک پیشرفته با ۲ پیام تست (۴ هش).
-- **C5HKAS:** چت امن گروهی پیشرفته با ۲ پیام تست (۵ هش).
+## ۲. مکانیزم‌های امنیتی اصلی
 
-## ۲. پروتکل C2HKAS (چت یک‌به‌یک پایه)
-**C2HKAS** مخفف **مقایسه ۲ هش، کلید نامتقارن، متقارن** است.
+### ۲.۱. هش کند (ضریب کار / Work Factor)
+برای جلوگیری از حملات Brute-force، کدهای ۸ کاراکتری با یک الگوریتم کند تولید می‌شوند. پیاده‌سازی‌ها باید از یک الگوریتم کشش کلید (مثلاً ۶ بار هش کردن که هر بار حدود ۰.۵ ثانیه طول می‌کشد) استفاده کنند. این کار باعث ایجاد یک **تاخیر پردازشی ۳ ثانیه‌ای** می‌شود. حتی با استفاده از GPUهای قدرتمند، ساختن یک کلید جعلی که دقیقاً همان هش ۸ کاراکتری را در زمان واقعی تولید کند، از نظر محاسباتی غیرممکن است.
 
-### ۲.۱. فرآیند دست‌دادن (Handshake)
-۱. **تولید کلید نامتقارن:** کاربر ۱ یک جفت کلید نامتقارن تولید می‌کند.
-۲. **تبادل کلید عمومی:** کاربر ۱ کلید عمومی خود را از طریق سرور برای کاربر ۲ می‌فرستد.
-۳. **مقایسه هش ۱ (ریشه):** کاربر ۱ و ۲ در تماس ویدیویی، هش کلید عمومی کاربر ۱ را مقایسه می‌کنند.
-۴. **تولید کلید متقارن:** کاربر ۲ یک کلید متقارن قوی تولید کرده و با کلید عمومی کاربر ۱ رمزش می‌کند.
-۵. **رمزگشایی و مقایسه هش ۲ (محتوا):** کاربر ۱ کلید را باز می‌کند. هر دو هش کلید متقارن را مقایسه می‌کنند.
-۶. **برقراری نشست:** در صورت تطابق، نشست E2EE برقرار می‌شود.
+### ۲.۲. تایید زنده ۳۰ ثانیه‌ای (OOB)
+تایید خارج از باند باید منحصراً یک تماس ویدیویی زنده باشد که برای مرحله تایید، حداکثر ۳۰ ثانیه طول می‌کشد. کاربران باید چهره زنده یکدیگر را ببینند. فرانت‌اند هش ۸ کاراکتری (مثل `B J H 7 - G 5 A R`) را نشان می‌دهد. کاربران کد را تایپ می‌کنند و سیستم خودکار مقایسه می‌کند. اگر سرور کلیدها را عوض کند (حمله MitM)، هشی که به کاربر ۱ و کاربر ۲ نشان داده می‌شود متفاوت خواهد بود و چون آن‌ها در حال ویدیو کال زنده با هم هستند، بلافاصله متوجه عدم تطابق می‌شوند.
 
-## ۳. پروتکل C3HKAS (چت گروهی پایه)
-**C3HKAS** مخفف **مقایسه ۳ هش، کلید نامتقارن، متقارن** است.
+## ۳. انواع پروتکل
+### ۳.۱. C2HKAS (چت یک‌به‌یک پایه)
+۱. تولید کلید. ۲. تبادل کلید عمومی. ۳. مقایسه هش ۱ در ویدیو کال ۳۰ ثانیه‌ای. ۴. تولید و رمز کردن کلید متقارن. ۵. مقایسه هش ۲ در ویدیو کال.
 
-C3HKAS از یک مدل ستاره‌ای ترتیبی استفاده می‌کند تا هر عضو کلید گروه را امن دریافت کند.
+### ۳.۲. C3HKAS (چت گروهی پایه)
+مدل ستاره‌ای ترتیبی: ادمین با تک‌تک کاربران (از ۱ تا N) ویدیو کال می‌کند و هش‌های ۱ و ۲ را تایید می‌کند. در نهایت (هش ۳) ادمین هش کلید نهایی گروه را برای همه ارسال می‌کند.
 
-### ۳.۱. فرآیند دست‌دادن (Handshake)
-۱. **ارسال کلید عمومی:** کاربر ۱ کلید عمومی خود را به ادمین می‌فرستد.
-۲. **تایید هش ریشه (هش ۱):** ادمین و کاربر ۱ در تماس ویدیویی، هش کلید عمومی را مقایسه می‌کنند.
-۳. **توزیع کلید متقارن:** ادمین کلید متقارن گروه را با کلید کاربر ۱ رمز کرده و می‌فرستد.
-۴. **تایید هش محتوا (هش ۲):** کاربر ۱ رمزگشایی می‌کند. هر دو هش کلید متقارن را مقایسه می‌کنند.
-۵. **تایید ترتیبی:** مراحل ۱ تا ۴ برای همه کاربران تا کاربر N تکرار می‌شود.
-۶. **تایید نهایی گروه (هش ۳):** ادمین هش نهایی کلید متقارن را در گروه ارسال می‌کند. همه کاربران آن را مقایسه می‌کنند.
+### ۳.۳. C4HKAS (چت یک‌به‌یک پیشرفته - پیشنهادی)
+علاوه بر مراحل C2HKAS (هش ۱ و ۲)، دو پیام تست (Ping و Pong) با کلید متقارن رمز و ارسال می‌شود تا عملکرد دوطرفه رمزنگاری ثابت شود (هش ۳ و ۴). این نسخه به کاربران پیشنهاد می‌شود.
 
-## ۴. پروتکل C4HKAS (چت یک‌به‌یک پیشرفته)
-**C4HKAS** مخفف **مقایسه ۴ هش، کلید نامتقارن، متقارن** است.
+### ۳.۴. C5HKAS (چت گروهی پیشرفته - پیشنهادی)
+علاوه بر مراحل C3HKAS (هش ۱، ۲ و ۳)، دو پیام تست گروهی توسط ادمین و کاربران ارسال می‌شود تا مطمئن شوند همه اعضا به کلید یکسان دسترسی دارند (هش ۴ و ۵).
 
-C4HKAS نسخه ارتقایافته C2HKAS است که با استفاده از ۲ پیام تست (چالش-پاسخ)، عملکرد دوطرفه رمزنگاری را اثبات می‌کند.
-
-### ۴.۱. فرآیند دست‌دادن (Handshake)
-۱. **تایید ریشه و محتوا:** کاربران پروتکل C2HKAS را انجام می‌دهند (هش ۱ و ۲).
-۲. **پیام تست ۱ (کاربر ۱ به ۲):** کاربر ۱ یک پیام رندوم (مثل Ping) را با کلید متقارن رمز کرده و می‌فرستد. کاربر ۲ آن را رمزگشایی و تایید می‌کند. (هش ۳)
-۳. **پیام تست ۲ (کاربر ۲ به ۱):** کاربر ۲ یک پیام رندوم (مثل Pong) را رمز کرده و می‌فرستد. کاربر ۱ آن را رمزگشایی و تایید می‌کند. (هش ۴)
-۴. **برقراری نشست:** در صورت تایید پیام‌های تست، نشست کاملاً امن تایید می‌شود.
-
-## ۵. پروتکل C5HKAS (چت گروهی پیشرفته)
-**C5HKAS** مخفف **مقایسه ۵ هش، کلید نامتقارن، متقارن** است.
-
-C5HKAS نسخه ارتقایافته C3HKAS است که با تبادل ۲ پیام تست گروهی، اطمینان حاصل می‌کند کلید در همه گره‌ها یکسان است.
-
-### ۵.۱. فرآیند دست‌دادن (Handshake)
-۱. **تایید ریشه، محتوا و نهایی:** کاربران پروتکل C3HKAS را انجام می‌دهند (هش ۱، ۲ و ۳).
-۲. **پیام تست ۱ (ادمین به گروه):** ادمین یک پیام تست رمزنگاری‌شده با کلید گروه می‌فرستد. همه کاربران باید آن را رمزگشایی و تایید کنند. (هش ۴)
-۳. **پیام تست ۲ (گروه به ادمین):** یک یا همه کاربران یک پیام تست رمز کرده و به گروه می‌فرستند. ادمین و بقیه آن را تایید می‌کنند. (هش ۵)
-۴. **برقراری نشست:** نشست E2EE گروهی کاملاً تایید می‌شود.
-
-## ۶. ملاحظات امنیتی
-- **سرور بدون اعتماد:** سرور فقط نقش رله را دارد و نمی‌تواند کلیدها را بخواند.
-- **تایید خارج از باند (OOB):** تماس ویدیویی زنده، منبع نهایی حقیقت است.
-- **رازداری رو به جلو:** (برای آینده) کلیدها با الگوریتم Double Ratchet چرخش پیدا می‌کنند.
+## ۴. ملاحظات امنیتی
+- **سرور بدون اعتماد:** سرور فقط داده‌ها را جابجا می‌کند و کلیدها را نمی‌خواند.
+- **چرا دیپ‌فیک شکست می‌خورد؟** تاخیر ۳ ثانیه‌ای هش و تایید بصری زنده ۳۰ ثانیه‌ای، ساختن دیپ‌فیک در زمان واقعی را از نظر محاسباتی و مالی برای هکرها غیرممکن می‌کند.
 
 ---
 
@@ -144,20 +109,131 @@ C5HKAS نسخه ارتقایافته C3HKAS است که با تبادل ۲ پی�
 **مراسلة الويب Penguin - خدمة E2EE**
 
 ## 1. مقدمة
-يعمل Penguin Web Messaging على بنية ذات خدمتين: 1. الدردشة العادية. 2. خدمة E2EE (أقصى درجات الأمان باستخدام CXHKAS).
+خدمتان: دردشة عادية، وخدمة E2EE (عائلة CXHKAS). يعتمد على مكالمة فيديو مباشرة (OOB) للقضاء على هجمات الوسيط. الخادم غير موثوق.
+أربعة أنواع: C2HKAS، C3HKAS، C4HKAS، C5HKAS.
 
-تم تصميم عائلة بروتوكول **CXHKAS** للقضاء على هجمات الوسيط (MitM) باستخدام مكالمة فيديو مباشرة كقناة تحقق خارج النطاق (OOB). يتم التعامل مع الخادم على أنه غير موثوق، ويتم التحقق من الهوية بالكامل بواسطة المستخدمين.
+## 2. آليات الأمان الأساسية
+### 2.1. التجزئة البطيئة (عامل العمل)
+يتم إنشاء الأرقام المكونة من 8 أحرف باستخدام خوارزمية بطيئة (6 تكرارات، كل منها يستغرق ~0.5 ثانية) لتأخير 3 ثوانٍ. هذا يجعل من المستحيل حسابياً إنشاء مفتاح مزيف ينتج نفس التجزئة في الوقت الفعلي.
 
-يحدد هذا المستند أربعة أنواع من البروتوكول:
-- **C2HKAS:** دردشة فردية أساسية (تجزئتان).
-- **C3HKAS:** دردشة جماعية أساسية (3 تجزئات).
-- **C4HKAS:** دردشة فردية متقدمة مع رسالتي اختبار (4 تجزئات).
-- **C5HKAS:** دردشة جماعية متقدمة مع رسالتي اختبار (5 تجزئات).
+### 2.2. التحقق المباشر لمدة 30 ثانية
+يجب أن يكون التحقق عبر مكالمة فيديو مباشرة (بحد أقصى 30 ثانية). يرى المستخدمون وجوه بعضهم البعض ويقارنون تجزئة 8 أحرف التي تظهر على الشاشة. إذا قام الخادم بتبديل المفاتيح، سيرى المستخدم 1 والمستخدم 2 تجزئات مختلفة وسيكتشفون ذلك فوراً.
 
-## 2. C2HKAS (دردشة فردية أساسية)
-**C2HKAS** تعني **م**قارنة **2** **ت**جزئة، **م**فتاح **غ**ير متماثل، **م**تماثل.
+## 3. أنواع البروتوكول
+### 3.1. C2HKAS (أساسي 1-1)
+توليد المفتاح، التبادل، مقارنة التجزئة 1، إنشاء مفتاح متماثل، مقارنة التجزئة 2.
 
-### 2.1. تدفق المصافحة
+### 3.2. C3HKAS (أساسي جماعي)
+نموذج متسلسل: المسؤول يجري مكالمات فيديو مع كل مستخدم (1 إلى N) للتحقق من التجزئات 1 و 2. ثم يبث التجزئة 3 النهائية.
+
+### 3.3. C4HKAS (متقدم 1-1 - موصى به)
+C2HKAS + رسالتا اختبار (Ping و Pong) لإثبات أن التشفير ثنائي الاتجاه يعمل (التجزئات 3 و 4).
+
+### 3.4. C5HKAS (متقدم جماعي - موصى به)
+C3HKAS + رسالتا اختبار جماعيتان للتحقق من تطابق المفتاح لدى الجميع (التجزئات 4 و 5).
+
+## 4. اعتبارات أمنية
+- **خادم غير موثوق:** الخادم ينقل البيانات فقط.
+- **فشل التزييف العميق:** التأخير البالغ 3 ثوانٍ والتحقق المرئي المباشر لمدة 30 ثانية يجعلان التزييف العميق في الوقت الفعلي مستحيلاً من حيث التكلفة والحساب.
+
+---
+
+# <a id="korean"></a>🇰🇷 CXHKAS 프로토콜 사양
+**Penguin Web Messaging - E2EE 서비스**
+
+## 1. 소개
+일반 채팅 및 E2EE 서비스 (CXHKAS 제품군). 실시간 화상 통화(OOB)를 사용하여 중간자 공격을 제거합니다. 서버는 신뢰할 수 없습니다.
+4가지 유형: C2HKAS, C3HKAS, C4HKAS, C5HKAS.
+
+## 2. 핵심 보안 메커니즘
+### 2.1. 느린 해싱 (작업 계수)
+8자리 코드는 느린 해싱 알고리즘(6회 반복, 각 ~0.5초)을 사용하여 3초의 지연을 만듭니다. 이는 실시간으로 동일한 해시를 생성하는 위조 키를 계산하는 것을 불가능하게 만듭니다.
+
+### 2.2. 30초 실시간 OOB 검증
+검증은 최대 30초의 실시간 화상 통화여야 합니다. 사용자는 서로의 얼굴을 보며 화면에 표시된 8자리 해시를 비교합니다. 서버가 키를 바꾸면 사용자 1과 2는 서로 다른 해시를 보게 되어 즉시 탐지됩니다.
+
+## 3. 프로토콜 유형
+### 3.1. C2HKAS (기본 1대1)
+키 생성, 교환, 해시 1 비교, 대칭 키 생성, 해시 2 비교.
+
+### 3.2. C3HKAS (기본 그룹)
+순차적 모델: 관리자가 각 사용자(1~N)와 화상 통화하여 해시 1과 2를 확인합니다. 그런 다음 최종 해시 3을 브로드캐스트합니다.
+
+### 3.3. C4HKAS (고급 1대1 - 권장)
+C2HKAS + 2개의 테스트 메시지(Ping, Pong)를 통해 양방향 암호화가 작동함을 증명합니다 (해시 3, 4).
+
+### 3.4. C5HKAS (고급 그룹 - 권장)
+C3HKAS + 2개의 그룹 테스트 메시지를 통해 모든 구성원이 동일한 키를 가지고 있는지 확인합니다 (해시 4, 5).
+
+## 4. 보안 고려 사항
+- **신뢰할 수 없는 서버:** 서버는 데이터만 릴레이합니다.
+- **딥페이크 실패 이유:** 3초의 느린 해시 지연과 30초의 실시간 시각적 검증은 실시간 딥페이크를 비용 및 계산 측면에서 불가능하게 만듭니다.
+
+---
+
+# <a id="chinese"></a>🇨🇳 CXHKAS 协议规范
+**企鹅网络通讯 - E2EE 服务**
+
+## 1. 简介
+普通聊天和 E2EE 服务（CXHKAS 系列）。利用实时视频通话（OOB）消除中间人攻击。服务器不受信任。
+四种类型：C2HKAS, C3HKAS, C4HKAS, C5HKAS。
+
+## 2. 核心安全机制
+### 2.1. 慢速哈希（工作因子）
+8 位代码使用慢速哈希算法（6 次迭代，每次约 0.5 秒）生成，造成 3 秒的延迟。这使得在实时中计算生成相同哈希的伪造密钥变得不可能。
+
+### 2.2. 30 秒实时 OOB 验证
+验证必须是最高 30 秒的实时视频通话。用户看着对方的脸，比较屏幕上显示的 8 位哈希。如果服务器交换了密钥，用户 1 和用户 2 将看到不同的哈希，从而立即被发现。
+
+## 3. 协议类型
+### 3.1. C2HKAS（基础 1 对 1）
+生成密钥、交换、哈希 1 比较、生成对称密钥、哈希 2 比较。
+
+### 3.2. C3HKAS（基础群组）
+顺序模型：管理员与每个用户（1 到 N）视频通话验证哈希 1 和 2。然后广播最终哈希 3。
+
+### 3.3. C4HKAS（高级 1 对 1 - 推荐）
+C2HKAS + 2 条测试消息（Ping, Pong），证明双向加密正常工作（哈希 3, 4）。
+
+### 3.4. C5HKAS（高级群组 - 推荐）
+C3HKAS + 2 条群组测试消息，确认所有成员拥有相同的密钥（哈希 4, 5）。
+
+## 4. 安全注意事项
+- **无信任服务器：** 服务器仅转发数据。
+- **为什么深度伪造会失败：** 3 秒的慢速哈希延迟和 30 秒的实时视觉验证使得实时深度伪造在成本和计算上变得不可能。
+
+---
+
+# <a id="japanese"></a>🇯🇵 CXHKAS プロトコル仕様
+**Penguin Web Messaging - E2EEサービス**
+
+## 1. はじめに
+通常チャットとE2EEサービス（CXHKASファミリー）。ライブビデオ通話（OOB）を利用して中間者攻撃を排除します。サーバーは信頼できません。
+4つのタイプ：C2HKAS, C3HKAS, C4HKAS, C5HKAS。
+
+## 2. コアセキュリティメカニズム
+### 2.1. 遅いハッシュ（ワークファクター）
+8文字のコードは、遅いハッシュアルゴリズム（6回の反復、各約0.5秒）を使用して生成され、3秒の遅延を引き起こします。これにより、リアルタイムで同じハッシュを生成する偽のキーを計算することは不可能になります。
+
+### 2.2. 30秒のライブOOB検証
+検証は最大30秒のライブビデオ通話でなければなりません。ユーザーはお互いの顔を見ながら、画面に表示される8文字のハッシュを比較します。サーバーがキーを交換した場合、ユーザー1と2は異なるハッシュを見ることになり、即座に発見されます。
+
+## 3. プロトコルの種類
+### 3.1. C2HKAS（基本 1対1）
+キー生成、交換、ハッシュ1比較、対称キー生成、ハッシュ2比較。
+
+### 3.2. C3HKAS（基本グループ）
+順次モデル：管理者が各ユーザー（1〜N）とビデオ通話してハッシュ1と2を確認します。その後、最終ハッシュ3をブロードキャストします。
+
+### 3.3. C4HKAS（高度 1対1 - 推奨）
+C2HKAS + 2つのテストメッセージ（Ping, Pong）で双方向暗号化が機能することを証明します（ハッシュ3, 4）。
+
+### 3.4. C5HKAS（高度グループ - 推奨）
+C3HKAS + 2つのグループテストメッセージで、すべてのメンバーが同じキーを持っていることを確認します（ハッシュ4, 5）。
+
+## 4. セキュリティに関する考慮事項
+- **トラストレスサーバー:** サーバーはデータを中継するだけです。
+- **ディープフェイクが失敗する理由:** 3秒の遅いハッシュ遅延と30秒のライブ視覚検証により、リアルタイムのディープフェイクはコストと計算の両面で不可能になります。فحة
 1. **توليد مفتاح غير متماثل:** يقوم المستخدم 1 بإنشاء زوج مفاتيح.
 2. **تبادل المفتاح العام:** يرسل المستخدم 1 مفتاحه العام إلى المستخدم 2 عبر الخادم.
 3. **مقارنة التجزئة 1 (الجذر):** يقارن المستخدم 1 و 2 التجزئة عبر مكالمة فيديو مباشرة.
