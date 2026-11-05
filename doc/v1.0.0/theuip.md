@@ -1,5 +1,14 @@
 # Media Type: application/vnd.penguin-pn.theuip
 
+## 0. Name Origin
+The name **THEUIP** is an acronym for:
+*   **THE**me
+*   **U**ser
+*   **I**nternal
+*   **P**enguin-pn
+
+It signifies the format's purpose as an internal, user-specific theme packaging standard for the Penguin Web Messaging ecosystem.
+
 ## 1. Introduction
 The `application/vnd.penguin-pn.theuip` media type defines an openly documented binary format used for storing and transmitting UI themes for the **Penguin Web Messaging** application. 
 
