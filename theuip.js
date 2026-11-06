@@ -1,5 +1,7 @@
 import { zlibSync, unzlibSync, strToU8, strFromU8 } from 'fflate.js';
 
+const version = 1
+
 function filter_css(obj) {
   const allow = [
     "--bg-main", "--bg-panel", "--bg-chat", "--bg-msg-in", "--bg-msg-out",
@@ -176,4 +178,4 @@ function encode(theme) {
   }
 }
 
-export { filter_css, dctj, decode, encode };
+export { filter_css, dctj, decode, encode, version };
