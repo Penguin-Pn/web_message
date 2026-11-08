@@ -1,6 +1,6 @@
 import { zlibSync, unzlibSync, strToU8, strFromU8 } from 'fflate.js';
 
-const version = 1
+const version = 1;
 
 function filter_css(obj) {
   const allow = [
